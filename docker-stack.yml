@@ -1,0 +1,68 @@
+services:
+  frontend:
+    image: your-frontend-image:latest
+    networks:
+      - frontend_net
+    ports:
+      - "80:80"
+    secrets:
+      - REACT_APP_BASE_URL
+    environment:
+      - REACT_APP_BASE_URL=/run/secrets/REACT_APP_BASE_URL
+    deploy:
+      restart_policy:
+        condition: on-failure
+    
+  backend:
+    image: your-backend-image-name:latest
+    networks:
+      - frontend_net
+      - backend_net
+    ports:
+      - "3001:3001"
+    environment:
+      - SECRET_KEY_FILE=/run/secrets/SECRET_KEY_FILE
+      - DATABASE_URL_FILE=/run/secrets/mongodb_url
+    depends_on:
+      - db
+      - redis
+    deploy:
+      restart_policy:
+        condition: on-failure
+    secrets:
+      - SECRET_KEY_FILE
+      - mongodb_url
+
+  redis:
+    image: redis:alpine
+    networks:
+      - backend_net
+
+  db:
+    image: mongo:6
+    networks:
+      - backend_net
+    ports:
+      - "27017:27017"
+    volumes:
+      - db_data:/data/db
+    deploy:
+      restart_policy:
+        condition: on-failure
+
+networks:
+  frontend_net:
+    driver: overlay
+  backend_net:
+    driver: overlay
+
+volumes:
+  db_data:
+
+secrets:
+  REACT_APP_BASE_URL:
+    file: ./REACT_APP_BASE_URL
+  SECRET_KEY_FILE:
+    file: ./SECRET_KEY_FILE
+  mongodb_url:
+    file: ./mongodb_url
